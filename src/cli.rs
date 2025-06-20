@@ -24,13 +24,9 @@ pub enum SubCommand {
 
 #[derive(Debug, clap::Args)]
 pub struct Run {
-    #[clap(
-        long,
-        short = 'H',
-        default_value = "Some(core::net::IpAddr::V4(core::net::Ipv4Addr::LOCALHOST))"
-    )]
+    #[clap(long, short = 'H')]
     pub host: Option<core::net::IpAddr>,
-    #[clap(long, short, default_value = "Some(5599u16)")]
+    #[clap(long, short)]
     pub port: Option<u16>,
 }
 

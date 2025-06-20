@@ -109,6 +109,10 @@ impl Command {
     // pub async fn query(id: uuid::Uuid, database: &sqlx::SqlitePool) -> Result<Command> {
     //     query_get(database, id).await
     // }
+    pub async fn delete(&self, database: &sqlx::SqlitePool) -> Result<()> {
+        query_delete(database, self.id).await
+    }
+
     pub async fn list(database: &sqlx::SqlitePool) -> Result<Vec<Command>> {
         query_list(database).await
     }
@@ -186,6 +190,16 @@ async fn query_name(database: &sqlx::SqlitePool, name: &str) -> Result<Command> 
         .change_context(Error)
         .attach_printable(format!("Failed to query command with name: {}", name))
         .attach(http::StatusCode::NOT_FOUND)
+}
+
+async fn query_delete(database: &sqlx::SqlitePool, id: uuid::Uuid) -> Result<()> {
+    sqlx::query("DELETE FROM commands WHERE id = ?")
+        .bind(id.as_hyphenated())
+        .execute(database)
+        .await
+        .change_context(Error)
+        .attach_printable(format!("Failed to delete command with id: {}", id))?;
+    Ok(())
 }
 
 async fn query_identifier(database: &sqlx::SqlitePool, identifier: Identifier) -> Result<Command> {

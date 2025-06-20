@@ -20,6 +20,7 @@ pub fn commands() -> axum::Router {
         .route("/", axum::routing::get(list_commands))
         .route("/search", axum::routing::get(identifier_command))
         .route("/run", axum::routing::post(run_identifier_command))
+        .route("/", axum::routing::delete(delete_identifier_command))
 }
 pub async fn handler_404(uri: http::Uri) -> Result<()> {
     Err(Error)
@@ -60,6 +61,7 @@ pub async fn list_commands(
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct History {
+    #[serde(default)]
     history: bool,
 }
 
@@ -86,4 +88,13 @@ pub async fn run_identifier_command(
         output.save(&db, command.id).await?;
     }
     Ok(axum::Json(output))
+}
+
+pub async fn delete_identifier_command(
+    axum::extract::Query(id): axum::extract::Query<command::Identifier>,
+    Extension(db): Extension<sqlx::SqlitePool>,
+) -> Result<()> {
+    let command = Command::identifier(&db, id).await?;
+    command.delete(&db).await.change_context(Error)?;
+    Ok(())
 }

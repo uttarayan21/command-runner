@@ -112,9 +112,9 @@ impl PartialConfig {
 
     pub fn or(self, other: Self) -> Self {
         Self {
-            database: other.database.or(self.database),
-            host: other.host.or(self.host),
-            port: other.port.or(self.port),
+            database: self.database.or(other.database),
+            host: self.host.or(other.host),
+            port: self.port.or(other.port),
         }
     }
 
