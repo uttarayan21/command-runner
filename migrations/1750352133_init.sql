@@ -8,11 +8,22 @@ CREATE TABLE IF NOT EXISTS "users" (
 
 CREATE TABLE IF NOT EXISTS "commands" (
     "id" text NOT NULL PRIMARY KEY,
+    "name" text NOT NULL UNIQUE,
     "command" text NOT NULL,
     "args" json,
-    "description" text,
     "created_at" datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS "logs" (
+    "id" text NOT NULL PRIMARY KEY,
+    "command_id" text,
+    "stdout" text,
+    "stderr" text,
+    "exit_code" integer,
+    "created_at" datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY ("command_id") REFERENCES "commands" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE trigger IF NOT EXISTS "commands_updated_at"

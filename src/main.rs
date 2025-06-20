@@ -1,7 +1,7 @@
 mod cli;
 mod errors;
 use errors::*;
-use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 mod app;
 mod command;
 mod database;
@@ -29,7 +29,7 @@ pub async fn main() -> Result<()> {
         cli::SubCommand::Add(add) => {
             let database_path = dunce::simplified(&args.database);
             let database = database::connect(database_path.display().to_string()).await?;
-            let command = command::Command::new(add.command, add.args);
+            let command = command::Command::new(add.name, add.command, add.args);
             command.add(&database).await?;
         }
         cli::SubCommand::Completions { shell } => {

@@ -28,6 +28,7 @@ pub struct Run {
 
 #[derive(Debug, clap::Args)]
 pub struct Add {
+    pub name: String,
     pub command: String,
     pub args: Vec<String>,
 }

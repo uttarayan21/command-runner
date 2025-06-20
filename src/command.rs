@@ -3,6 +3,7 @@ use crate::*;
 pub struct Command {
     #[sqlx(try_from = "UuidWrapper")]
     pub id: Option<uuid::Uuid>,
+    pub name: String,
     pub command: String,
     #[sqlx(json)]
     pub args: Vec<String>,
@@ -50,9 +51,10 @@ impl From<std::process::Output> for Output {
 }
 
 impl Command {
-    pub const fn new(command: String, args: Vec<String>) -> Self {
+    pub const fn new(name: String, command: String, args: Vec<String>) -> Self {
         Command {
             id: None,
+            name,
             command,
             args,
         }
@@ -90,7 +92,7 @@ impl Command {
 }
 
 async fn query_get(database: &sqlx::SqlitePool, id: uuid::Uuid) -> Result<Command> {
-    sqlx::query_as("SELECT id, command, args FROM commands WHERE id = ?")
+    sqlx::query_as("SELECT id,name, command, args FROM commands WHERE id = ?")
         .bind(id.as_hyphenated())
         .fetch_one(database)
         .await
@@ -100,7 +102,7 @@ async fn query_get(database: &sqlx::SqlitePool, id: uuid::Uuid) -> Result<Comman
 }
 
 async fn query_list(database: &sqlx::SqlitePool) -> Result<Vec<Command>> {
-    sqlx::query_as("SELECT id, command, args FROM commands")
+    sqlx::query_as("SELECT id,name, command, args FROM commands")
         .fetch_all(database)
         .await
         .change_context(Error)
@@ -109,7 +111,7 @@ async fn query_list(database: &sqlx::SqlitePool) -> Result<Vec<Command>> {
 
 async fn query_add(database: &sqlx::SqlitePool, command: &Command) -> Result<uuid::Uuid> {
     let id = uuid::Uuid::new_v4();
-    sqlx::query("INSERT INTO commands (id, command, args) VALUES (?, ?, ?)")
+    sqlx::query("INSERT INTO commands (id, name, command, args) VALUES (?, ?, ?)")
         .bind(id.as_hyphenated())
         .bind(&command.command)
         .bind(&sqlx::types::Json(&command.args))
@@ -122,7 +124,7 @@ async fn query_add(database: &sqlx::SqlitePool, command: &Command) -> Result<uui
 }
 
 async fn query_like(database: &sqlx::SqlitePool, pattern: &str) -> Result<Vec<Command>> {
-    sqlx::query_as("SELECT id, command, args FROM commands WHERE command LIKE ?")
+    sqlx::query_as("SELECT id,name, command, args FROM commands WHERE command LIKE ?")
         .bind(format!("%{}%", pattern))
         .fetch_all(database)
         .await
