@@ -5,7 +5,9 @@ pub struct Cli {
     #[clap(subcommand)]
     pub cmd: SubCommand,
     #[clap(long, short, default_value = "database.sqlite")]
-    pub database: PathBuf,
+    pub database: Option<PathBuf>,
+    #[clap(long, short, default_value = "config.toml")]
+    pub config: PathBuf,
 }
 
 #[derive(Debug, clap::Subcommand)]
@@ -22,10 +24,14 @@ pub enum SubCommand {
 
 #[derive(Debug, clap::Args)]
 pub struct Run {
-    #[clap(long, short = 'H', default_value_t = core::net::IpAddr::V4(core::net::Ipv4Addr::LOCALHOST))]
-    pub host: core::net::IpAddr,
-    #[clap(long, short, default_value_t = 5599u16)]
-    pub port: u16,
+    #[clap(
+        long,
+        short = 'H',
+        default_value = "Some(core::net::IpAddr::V4(core::net::Ipv4Addr::LOCALHOST))"
+    )]
+    pub host: Option<core::net::IpAddr>,
+    #[clap(long, short, default_value = "Some(5599u16)")]
+    pub port: Option<u16>,
 }
 
 #[derive(Debug, clap::Args)]

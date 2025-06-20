@@ -4,8 +4,10 @@ use errors::*;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 mod app;
 mod command;
+mod config;
 mod database;
 mod routes;
+
 #[tokio::main]
 pub async fn main() -> Result<()> {
     tracing_subscriber::registry()
@@ -19,23 +21,31 @@ pub async fn main() -> Result<()> {
 
     let args = <cli::Cli as clap::Parser>::parse();
     match args.cmd {
-        cli::SubCommand::Run(run) => {
-            let database_path = dunce::simplified(&args.database);
-            app::App::new(database_path.display().to_string(), run.host, run.port)
-                .await?
-                .serve()
-                .await?;
+        cli::SubCommand::Run(_) => {
+            let config = config::Config::try_new(&args)?;
+            let database_path = dunce::simplified(&config.database);
+            app::App::new(
+                database_path.display().to_string(),
+                config.host,
+                config.port,
+            )
+            .await?
+            .serve()
+            .await?;
         }
-        cli::SubCommand::Add(add) => {
-            let database_path = dunce::simplified(&args.database);
+        cli::SubCommand::Add(ref add) => {
+            let config = config::Config::try_new(&args)?;
+            let database_path = dunce::simplified(&config.database);
             let database = database::connect(database_path.display().to_string()).await?;
-            let command = command::Command::new(add.name, add.command, add.args);
+            let command =
+                command::Command::new(add.name.clone(), add.command.clone(), add.args.clone());
             command.add(&database).await?;
         }
-        cli::SubCommand::List(list) => {
-            let database_path = dunce::simplified(&args.database);
+        cli::SubCommand::List(ref list) => {
+            let config = config::Config::try_new(&args)?;
+            let database_path = dunce::simplified(&config.database);
             let database = database::connect(database_path.display().to_string()).await?;
-            let cmds = if let Some(like) = list.name.or(list.command) {
+            let cmds = if let Some(like) = list.name.clone().or(list.command.clone()) {
                 command::Command::like(&database, like).await?
             } else {
                 command::Command::list(&database).await?

@@ -129,10 +129,10 @@
             // {inherit cargoArtifacts;}
             // {
               postInstall = ''
-                for shell in bash fish zsh; do
-                  $out/bin/${name} completions $shell > ${name}.$shell
-                  installShellCompletion ${name}.$shell
-                done
+                installShellCompletion --cmd ${name} \
+                  --bash <($out/bin/${name} completions -s bash) \
+                  --fish <($out/bin/${name} completions -s fish) \
+                  --zsh <($out/bin/${name} completions -s zsh)
               '';
             });
         in {

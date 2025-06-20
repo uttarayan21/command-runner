@@ -3,6 +3,11 @@ pub use error_stack::{Report, ResultExt};
 #[derive(Debug, thiserror::Error)]
 #[error("An error occurred")]
 pub struct Error;
+impl Error {
+    pub fn new() -> Report<Self> {
+        Report::new(Self)
+    }
+}
 
 pub type Result<T, E = error_stack::Report<Error>> = core::result::Result<T, E>;
 

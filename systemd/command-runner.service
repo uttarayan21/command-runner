@@ -1,0 +1,15 @@
+[Unit]
+Description=Command Runner
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/command-runner --config /etc/command-runner/config.yaml
+Restart=on-failure
+User=cmd-runner
+Group=cmd-runner
+WorkingDirectory=/var/lib/command-runner
+
+[Install]
+WantedBy=multi-user.target
+

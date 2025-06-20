@@ -106,9 +106,9 @@ impl Command {
         query_add(database, &self).await
     }
 
-    pub async fn query(id: uuid::Uuid, database: &sqlx::SqlitePool) -> Result<Command> {
-        query_get(database, id).await
-    }
+    // pub async fn query(id: uuid::Uuid, database: &sqlx::SqlitePool) -> Result<Command> {
+    //     query_get(database, id).await
+    // }
     pub async fn list(database: &sqlx::SqlitePool) -> Result<Vec<Command>> {
         query_list(database).await
     }
@@ -150,7 +150,7 @@ async fn query_add(database: &sqlx::SqlitePool, command: &Command) -> Result<uui
         .bind(id.as_simple())
         .bind(&command.name)
         .bind(&command.command)
-        .bind(&sqlx::types::Json(&command.args))
+        .bind(sqlx::types::Json(&command.args))
         .execute(database)
         .await
         .change_context(Error)
