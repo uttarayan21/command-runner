@@ -32,6 +32,21 @@ pub async fn main() -> Result<()> {
             let command = command::Command::new(add.name, add.command, add.args);
             command.add(&database).await?;
         }
+        cli::SubCommand::List(list) => {
+            let database_path = dunce::simplified(&args.database);
+            let database = database::connect(database_path.display().to_string()).await?;
+            let cmds = if let Some(like) = list.name.or(list.command) {
+                command::Command::like(&database, like).await?
+            } else {
+                command::Command::list(&database).await?
+            };
+            cmds.iter().for_each(|cmd| {
+                if list.verbose {
+                    print!("{}: ", cmd.id);
+                }
+                println!("{}: {} {}", cmd.name, cmd.command, cmd.args.join(" "));
+            });
+        }
         cli::SubCommand::Completions { shell } => {
             cli::Cli::completions(shell);
         }

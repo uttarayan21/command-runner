@@ -14,6 +14,8 @@ pub enum SubCommand {
     Run(Run),
     #[clap(name = "add")]
     Add(Add),
+    #[clap(name = "list")]
+    List(List),
     #[clap(name = "completions")]
     Completions { shell: clap_complete::Shell },
 }
@@ -31,6 +33,16 @@ pub struct Add {
     pub name: String,
     pub command: String,
     pub args: Vec<String>,
+}
+
+#[derive(Debug, clap::Args)]
+pub struct List {
+    #[clap(long, short = 'n', group = "like")]
+    pub name: Option<String>,
+    #[clap(long, short = 'c', group = "like")]
+    pub command: Option<String>,
+    #[clap(long, short = 'v', help = "Enable verbose output")]
+    pub verbose: bool,
 }
 
 impl Cli {

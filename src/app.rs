@@ -29,10 +29,18 @@ impl App {
     }
 
     pub async fn serve(self) -> Result<()> {
+        use ::tap::*;
         tracing::info!("Starting server at http://{}:{}", self.host, self.port);
         let app = routes::routes()
             .layer(axum::Extension(self.database.clone()))
-            .layer(axum::middleware::from_fn(routes::handler_405))
+            .pipe(|app| {
+                {
+                    #[cfg(debug_assertions)]
+                    app.layer(axum::middleware::from_fn(routes::handler_405))
+                }
+                #[cfg(not(debug_assertions))]
+                app
+            })
             .fallback(routes::handler_404);
         let listener = tokio::net::TcpListener::bind((self.host, self.port))
             .await

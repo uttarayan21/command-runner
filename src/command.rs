@@ -2,19 +2,27 @@ use crate::*;
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
 pub struct Command {
     #[sqlx(try_from = "UuidWrapper")]
-    pub id: Option<uuid::Uuid>,
+    pub id: uuid::Uuid,
     pub name: String,
     pub command: String,
     #[sqlx(json)]
     pub args: Vec<String>,
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "type", content = "value")]
+pub enum Identifier {
+    Id(uuid::Uuid),
+    Name(String),
+    Like(String),
+}
+
 #[derive(Debug, sqlx::Type)]
 #[sqlx(transparent)]
 pub struct UuidWrapper(uuid::fmt::Hyphenated);
-impl From<UuidWrapper> for Option<uuid::Uuid> {
+impl From<UuidWrapper> for uuid::Uuid {
     fn from(input: UuidWrapper) -> Self {
-        Some(input.0.into_uuid())
+        input.0.into_uuid()
     }
 }
 
@@ -23,6 +31,27 @@ pub struct Output {
     pub stdout: String,
     pub stderr: String,
     pub status: ExitStatus,
+}
+
+impl Output {
+    pub async fn save(&self, database: &sqlx::SqlitePool, command_id: uuid::Uuid) -> Result<()> {
+        sqlx::query(
+            "INSERT INTO command_outputs (command_id, stdout, stderr, success, code) VALUES (?, ?, ?, ?, ?)",
+        )
+        .bind(command_id.as_hyphenated())
+        .bind(&self.stdout)
+        .bind(&self.stderr)
+        .bind(self.status.success)
+        .bind(self.status.code)
+        .execute(database)
+        .await
+        .change_context(Error)
+        .attach_printable(format!(
+            "Failed to save output for command id: {}",
+            command_id
+        ))?;
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -53,7 +82,7 @@ impl From<std::process::Output> for Output {
 impl Command {
     pub const fn new(name: String, command: String, args: Vec<String>) -> Self {
         Command {
-            id: None,
+            id: uuid::Uuid::nil(),
             name,
             command,
             args,
@@ -89,6 +118,12 @@ impl Command {
     ) -> Result<Vec<Command>> {
         query_like(database, pattern.as_ref()).await
     }
+    pub async fn identifier(
+        database: &sqlx::SqlitePool,
+        identifier: Identifier,
+    ) -> Result<Command> {
+        query_identifier(database, identifier).await
+    }
 }
 
 async fn query_get(database: &sqlx::SqlitePool, id: uuid::Uuid) -> Result<Command> {
@@ -111,8 +146,9 @@ async fn query_list(database: &sqlx::SqlitePool) -> Result<Vec<Command>> {
 
 async fn query_add(database: &sqlx::SqlitePool, command: &Command) -> Result<uuid::Uuid> {
     let id = uuid::Uuid::new_v4();
-    sqlx::query("INSERT INTO commands (id, name, command, args) VALUES (?, ?, ?)")
-        .bind(id.as_hyphenated())
+    sqlx::query("INSERT INTO commands (id, name, command, args) VALUES (?, ?, ?, ?)")
+        .bind(id.as_simple())
+        .bind(&command.name)
         .bind(&command.command)
         .bind(&sqlx::types::Json(&command.args))
         .execute(database)
@@ -124,10 +160,51 @@ async fn query_add(database: &sqlx::SqlitePool, command: &Command) -> Result<uui
 }
 
 async fn query_like(database: &sqlx::SqlitePool, pattern: &str) -> Result<Vec<Command>> {
-    sqlx::query_as("SELECT id,name, command, args FROM commands WHERE command LIKE ?")
-        .bind(format!("%{}%", pattern))
-        .fetch_all(database)
+    let pattern_bind = format!("%{}%", pattern);
+    let out = sqlx::query_as(
+        "SELECT id,name, command, args FROM commands WHERE command LIKE ? OR name LIKE ?",
+    )
+    .bind(&pattern_bind)
+    .bind(&pattern_bind)
+    .fetch_all(database)
+    .await
+    .change_context(Error)
+    .attach_printable(format!("Failed to query commands like: {}", pattern))?;
+    if out.is_empty() {
+        return Err(Error)
+            .attach_printable(format!("No commands found matching pattern: {}", pattern))
+            .attach(http::StatusCode::NOT_FOUND);
+    }
+    Ok(out)
+}
+
+async fn query_name(database: &sqlx::SqlitePool, name: &str) -> Result<Command> {
+    sqlx::query_as("SELECT id,name, command, args FROM commands WHERE name = ?")
+        .bind(name)
+        .fetch_one(database)
         .await
         .change_context(Error)
-        .attach_printable(format!("Failed to query commands like: {}", pattern))
+        .attach_printable(format!("Failed to query command with name: {}", name))
+        .attach(http::StatusCode::NOT_FOUND)
+}
+
+async fn query_identifier(database: &sqlx::SqlitePool, identifier: Identifier) -> Result<Command> {
+    match identifier {
+        Identifier::Id(uuid) => query_get(database, uuid).await,
+        Identifier::Name(name) => query_name(database, &name).await,
+        Identifier::Like(pattern) => Ok(query_like(database, &pattern).await?[0].clone()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_identifier_uuid() {
+        let uuid = uuid::Uuid::new_v4();
+        let identifier = Identifier::Id(uuid);
+        let id = serde_urlencoded::to_string(&identifier).expect("Failed to serialize Identifier");
+        assert_eq!(id, format!(r#"type=Id&value={}"#, uuid));
+    }
 }

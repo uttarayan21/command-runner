@@ -18,9 +18,8 @@ pub async fn root() -> &'static str {
 pub fn commands() -> axum::Router {
     axum::Router::new()
         .route("/", axum::routing::get(list_commands))
-        .route("/{id}", axum::routing::get(get_command))
-        .route("/{id}/run", axum::routing::post(run_command))
-        .route("/like", axum::routing::get(like_commands))
+        .route("/search", axum::routing::get(identifier_command))
+        .route("/run", axum::routing::post(run_identifier_command))
 }
 pub async fn handler_404(uri: http::Uri) -> Result<()> {
     Err(Error)
@@ -30,6 +29,7 @@ pub async fn handler_404(uri: http::Uri) -> Result<()> {
     Ok(())
 }
 
+#[cfg(debug_assertions)]
 pub async fn handler_405(
     request: axum::extract::Request,
     next: axum::middleware::Next,
@@ -58,30 +58,32 @@ pub async fn list_commands(
     Ok(axum::Json(Command::list(&db).await?))
 }
 
-pub async fn get_command(
-    axum::extract::Path(id): axum::extract::Path<uuid::Uuid>,
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+pub struct History {
+    history: bool,
+}
+
+impl Default for History {
+    fn default() -> Self {
+        History { history: true }
+    }
+}
+
+pub async fn identifier_command(
+    axum::extract::Query(identifier): axum::extract::Query<command::Identifier>,
     Extension(db): Extension<sqlx::SqlitePool>,
 ) -> Result<axum::Json<Command>> {
-    Ok(axum::Json(Command::query(id, &db).await?))
+    Ok(axum::Json(Command::identifier(&db, identifier).await?))
 }
-
-pub async fn run_command(
-    axum::extract::Path(id): axum::extract::Path<uuid::Uuid>,
+pub async fn run_identifier_command(
+    axum::extract::Query(identifier): axum::extract::Query<command::Identifier>,
+    axum::extract::Query(history): axum::extract::Query<History>,
     Extension(db): Extension<sqlx::SqlitePool>,
 ) -> Result<axum::Json<Output>> {
-    let command = Command::query(id, &db).await?;
+    let command = Command::identifier(&db, identifier).await?;
     let output = command.run().await?;
+    if history.history {
+        output.save(&db, command.id).await?;
+    }
     Ok(axum::Json(output))
-}
-
-#[derive(Debug, serde::Deserialize)]
-pub struct LikeCommand {
-    pub pattern: String,
-}
-
-pub async fn like_commands(
-    axum::extract::Query(pattern): axum::extract::Query<LikeCommand>,
-    Extension(db): Extension<sqlx::SqlitePool>,
-) -> Result<axum::Json<Vec<Command>>> {
-    Ok(axum::Json(Command::like(&db, pattern.pattern).await?))
 }

@@ -15,11 +15,12 @@ CREATE TABLE IF NOT EXISTS "commands" (
     "updated_at" datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS "logs" (
+CREATE TABLE IF NOT EXISTS "history" (
     "id" text NOT NULL PRIMARY KEY,
     "command_id" text,
     "stdout" text,
     "stderr" text,
+    "success" boolean,
     "exit_code" integer,
     "created_at" datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
