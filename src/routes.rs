@@ -100,7 +100,7 @@ pub async fn run_identifier_command(
         Ok(axum::Json(
             serde_json::value::RawValue::from_string(output.stdout)
                 .change_context(Error)
-                .attach_printable("Failed to parse output.stdout as json"),
+                .attach_printable("Failed to parse output.stdout as json")?,
         )
         .into_response())
     } else {
