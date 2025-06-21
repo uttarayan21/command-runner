@@ -86,7 +86,7 @@ pub enum CommandAddMode {
 impl Output {
     pub async fn save(&self, database: &sqlx::SqlitePool, command_id: uuid::Uuid) -> Result<()> {
         sqlx::query(
-            "INSERT INTO command_outputs (command_id, stdout, stderr, success, code) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO history (command_id, stdout, stderr, success, exit_code) VALUES (?, ?, ?, ?, ?)",
         )
         .bind(command_id)
         .bind(&self.stdout)

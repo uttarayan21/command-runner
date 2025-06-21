@@ -59,12 +59,10 @@ pub async fn list_commands(
 }
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[serde(default)]
 pub struct RunArgs {
-    #[serde(default)]
     history: bool,
-    #[serde(default)]
     full: bool,
-    #[serde(default)]
     json: bool,
 }
 
