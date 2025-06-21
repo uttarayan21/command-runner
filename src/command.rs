@@ -19,7 +19,7 @@ pub enum Identifier {
 
 #[derive(Debug, sqlx::Type)]
 #[sqlx(transparent)]
-pub struct UuidWrapper(uuid::fmt::Hyphenated);
+pub struct UuidWrapper(uuid::fmt::Simple);
 impl From<UuidWrapper> for uuid::Uuid {
     fn from(input: UuidWrapper) -> Self {
         input.0.into_uuid()
@@ -38,7 +38,7 @@ impl Output {
         sqlx::query(
             "INSERT INTO command_outputs (command_id, stdout, stderr, success, code) VALUES (?, ?, ?, ?, ?)",
         )
-        .bind(command_id.as_hyphenated())
+        .bind(command_id)
         .bind(&self.stdout)
         .bind(&self.stderr)
         .bind(self.status.success)
@@ -132,7 +132,7 @@ impl Command {
 
 async fn query_get(database: &sqlx::SqlitePool, id: uuid::Uuid) -> Result<Command> {
     sqlx::query_as("SELECT id,name, command, args FROM commands WHERE id = ?")
-        .bind(id.as_hyphenated())
+        .bind(id)
         .fetch_one(database)
         .await
         .change_context(Error)
@@ -194,7 +194,7 @@ async fn query_name(database: &sqlx::SqlitePool, name: &str) -> Result<Command> 
 
 async fn query_delete(database: &sqlx::SqlitePool, id: uuid::Uuid) -> Result<()> {
     sqlx::query("DELETE FROM commands WHERE id = ?")
-        .bind(id.as_hyphenated())
+        .bind(id)
         .execute(database)
         .await
         .change_context(Error)

@@ -77,8 +77,7 @@
             doCheck = false;
             # LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
             # nativeBuildInputs = with pkgs; [
-            #   cmake
-            #   llvmPackages.libclang.lib
+            #   installShellFiles
             # ];
             buildInputs = with pkgs;
               []
@@ -128,11 +127,14 @@
           pkg = craneLib.buildPackage (commonArgs
             // {inherit cargoArtifacts;}
             // {
+              nativeBuildInputs = with pkgs; [
+                installShellFiles
+              ];
               postInstall = ''
                 installShellCompletion --cmd ${name} \
-                  --bash <($out/bin/${name} completions -s bash) \
-                  --fish <($out/bin/${name} completions -s fish) \
-                  --zsh <($out/bin/${name} completions -s zsh)
+                  --bash <($out/bin/${name} completions bash) \
+                  --fish <($out/bin/${name} completions fish) \
+                  --zsh <($out/bin/${name} completions zsh)
               '';
             });
         in {
@@ -151,6 +153,7 @@
                   cargo-deny
                   sqlx-cli
                   cargo-expand
+                  sqlite
                 ]
                 ++ (lib.optionals pkgs.stdenv.isDarwin [
                   apple-sdk_13
@@ -162,6 +165,9 @@
     // {
       githubActions = nix-github-actions.lib.mkGithubMatrix {
         checks = nixpkgs.lib.getAttrs ["x86_64-linux"] self.checks;
+      };
+      nixosModules = {
+        command-runner = import ./nix/command-runner.nix self;
       };
     };
 }

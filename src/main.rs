@@ -57,6 +57,14 @@ pub async fn main() -> Result<()> {
                 println!("{}: {} {}", cmd.name, cmd.command, cmd.args.join(" "));
             });
         }
+        cli::SubCommand::Rm(ref rm) => {
+            let config = config::Config::try_new(&args)?;
+            let database_path = dunce::simplified(&config.database);
+            let database = database::connect(database_path.display().to_string()).await?;
+            let identifier = rm.to_identifier()?;
+            let command = command::Command::identifier(&database, identifier).await?;
+            command.delete(&database).await?;
+        }
         cli::SubCommand::Completions { shell } => {
             cli::Cli::completions(shell);
         }
