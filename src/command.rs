@@ -1,4 +1,5 @@
 use crate::*;
+use ::tap::*;
 use regex::Regex;
 
 use std::{collections::BTreeMap, sync::LazyLock};
@@ -122,8 +123,6 @@ impl From<std::process::ExitStatus> for ExitStatus {
 
 impl From<std::process::Output> for Output {
     fn from(output: std::process::Output) -> Self {
-        use ::tap::*;
-        dbg!(String::from_utf8(output.stdout.clone()));
         Output {
             stdout: String::from_utf8_lossy(&output.stdout)
                 .tap(|f| {
@@ -160,8 +159,14 @@ impl Command {
         use tokio::process::Command;
         Command::new(&self.command)
             .args(&self.args)
+            .tap(|f| {
+                dbg!(f);
+            })
             .output()
             .await
+            .tap(|i| {
+                dbg!(i);
+            })
             .change_context(Error)
             .attach_printable(format!(
                 "Failed to run command: {} with args: {}",
