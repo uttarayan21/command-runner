@@ -60,6 +60,10 @@ impl Rm {
 
 #[derive(Debug, clap::Args)]
 pub struct Add {
+    #[clap(long, short, help = "Ignore existing commands with the same name", default_value_t = false, group = "add_mode")]
+    pub ignore: bool,
+    #[clap(long, short, help = "Replace existing commands with the same name", default_value_t = false, group = "add_mode")]
+    pub replace: bool,
     pub name: String,
     pub command: String,
     pub args: Vec<String>,

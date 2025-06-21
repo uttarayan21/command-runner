@@ -33,6 +33,14 @@ pub struct Output {
     pub status: ExitStatus,
 }
 
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, Default)]
+pub enum CommandAddMode {
+    Ignore,
+    Replace,
+    #[default]
+    Error,
+}
+
 impl Output {
     pub async fn save(&self, database: &sqlx::SqlitePool, command_id: uuid::Uuid) -> Result<()> {
         sqlx::query(
@@ -102,8 +110,8 @@ impl Command {
             .map(From::from)
     }
 
-    pub async fn add(self, database: &sqlx::SqlitePool) -> Result<uuid::Uuid> {
-        query_add(database, &self).await
+    pub async fn add(self, database: &sqlx::SqlitePool, mode: CommandAddMode) -> Result<uuid::Uuid> {
+        query_add(database, &self, mode).await
     }
 
     // pub async fn query(id: uuid::Uuid, database: &sqlx::SqlitePool) -> Result<Command> {
@@ -148,9 +156,19 @@ async fn query_list(database: &sqlx::SqlitePool) -> Result<Vec<Command>> {
         .attach_printable("Failed to list commands")
 }
 
-async fn query_add(database: &sqlx::SqlitePool, command: &Command) -> Result<uuid::Uuid> {
+async fn query_add(database: &sqlx::SqlitePool, command: &Command, mode: CommandAddMode) -> Result<uuid::Uuid> {
     let id = uuid::Uuid::new_v4();
-    sqlx::query("INSERT INTO commands (id, name, command, args) VALUES (?, ?, ?, ?)")
+    match mode {
+        CommandAddMode::Ignore => {
+            sqlx::query("INSERT OR IGNORE INTO commands (id, name, command, args) VALUES (?, ?, ?, ?)")
+        }
+        CommandAddMode::Replace => {
+            sqlx::query("INSERT OR REPLACE INTO commands (id, name, command, args) VALUES (?, ?, ?, ?)")
+        }
+        CommandAddMode::Error => {
+            sqlx::query("INSERT INTO commands (id, name, command, args) VALUES (?, ?, ?, ?)")
+        }
+    }
         .bind(id.as_simple())
         .bind(&command.name)
         .bind(&command.command)

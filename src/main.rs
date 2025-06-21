@@ -39,7 +39,12 @@ pub async fn main() -> Result<()> {
             let database = database::connect(database_path.display().to_string()).await?;
             let command =
                 command::Command::new(add.name.clone(), add.command.clone(), add.args.clone());
-            command.add(&database).await?;
+            let mode = match (add.ignore, add.replace) {
+                (true, false) => command::CommandAddMode::Ignore,
+                (false, true) => command::CommandAddMode::Replace,
+                _ => command::CommandAddMode::Error,
+            };
+            command.add(&database, mode).await?;
         }
         cli::SubCommand::List(ref list) => {
             let config = config::Config::try_new(&args)?;
