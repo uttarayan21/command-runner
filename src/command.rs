@@ -110,7 +110,11 @@ impl Command {
             .map(From::from)
     }
 
-    pub async fn add(self, database: &sqlx::SqlitePool, mode: CommandAddMode) -> Result<uuid::Uuid> {
+    pub async fn add(
+        self,
+        database: &sqlx::SqlitePool,
+        mode: CommandAddMode,
+    ) -> Result<uuid::Uuid> {
         query_add(database, &self, mode).await
     }
 
@@ -119,6 +123,10 @@ impl Command {
     // }
     pub async fn delete(&self, database: &sqlx::SqlitePool) -> Result<()> {
         query_delete(database, self.id).await
+    }
+
+    pub async fn delete_all(database: &sqlx::SqlitePool) -> Result<()> {
+        delete_all(database).await
     }
 
     pub async fn list(database: &sqlx::SqlitePool) -> Result<Vec<Command>> {
@@ -156,28 +164,32 @@ async fn query_list(database: &sqlx::SqlitePool) -> Result<Vec<Command>> {
         .attach_printable("Failed to list commands")
 }
 
-async fn query_add(database: &sqlx::SqlitePool, command: &Command, mode: CommandAddMode) -> Result<uuid::Uuid> {
+async fn query_add(
+    database: &sqlx::SqlitePool,
+    command: &Command,
+    mode: CommandAddMode,
+) -> Result<uuid::Uuid> {
     let id = uuid::Uuid::new_v4();
     match mode {
-        CommandAddMode::Ignore => {
-            sqlx::query("INSERT OR IGNORE INTO commands (id, name, command, args) VALUES (?, ?, ?, ?)")
-        }
-        CommandAddMode::Replace => {
-            sqlx::query("INSERT OR REPLACE INTO commands (id, name, command, args) VALUES (?, ?, ?, ?)")
-        }
+        CommandAddMode::Ignore => sqlx::query(
+            "INSERT OR IGNORE INTO commands (id, name, command, args) VALUES (?, ?, ?, ?)",
+        ),
+        CommandAddMode::Replace => sqlx::query(
+            "INSERT OR REPLACE INTO commands (id, name, command, args) VALUES (?, ?, ?, ?)",
+        ),
         CommandAddMode::Error => {
             sqlx::query("INSERT INTO commands (id, name, command, args) VALUES (?, ?, ?, ?)")
         }
     }
-        .bind(id.as_simple())
-        .bind(&command.name)
-        .bind(&command.command)
-        .bind(sqlx::types::Json(&command.args))
-        .execute(database)
-        .await
-        .change_context(Error)
-        .attach_printable(format!("Failed to add command: {}", command.command))
-        .attach(http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    .bind(id.as_simple())
+    .bind(&command.name)
+    .bind(&command.command)
+    .bind(sqlx::types::Json(&command.args))
+    .execute(database)
+    .await
+    .change_context(Error)
+    .attach_printable(format!("Failed to add command: {}", command.command))
+    .attach(http::StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(id)
 }
 
@@ -217,6 +229,15 @@ async fn query_delete(database: &sqlx::SqlitePool, id: uuid::Uuid) -> Result<()>
         .await
         .change_context(Error)
         .attach_printable(format!("Failed to delete command with id: {}", id))?;
+    Ok(())
+}
+
+async fn delete_all(database: &sqlx::SqlitePool) -> Result<()> {
+    sqlx::query("DELETE FROM commands")
+        .execute(database)
+        .await
+        .change_context(Error)
+        .attach_printable("Failed to delete all commands")?;
     Ok(())
 }
 

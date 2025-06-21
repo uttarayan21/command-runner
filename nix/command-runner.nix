@@ -154,8 +154,9 @@ in {
       };
 
       script = let
+        delete_all = "${lib.getExe cfg.package} delete --all";
         commands = lib.concatStringsSep "\n" (
-          lib.mapAttrsToList (name: value: "${lib.getExe cfg.package} add ${name} ${lib.concatStringsSep " " value}") cfg.commands
+          lib.mapAttrsToList (name: value: "${lib.getExe cfg.package} add --replace ${name} ${lib.concatStringsSep " " value}") cfg.commands
         );
       in ''
         ${commands}

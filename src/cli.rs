@@ -20,7 +20,7 @@ pub enum SubCommand {
     Add(Add),
     #[clap(name = "list")]
     List(List),
-    #[clap(name = "rm")]
+    #[clap(name = "rm", alias = "delete")]
     Rm(Rm),
     #[clap(name = "completions")]
     Completions { shell: clap_complete::Shell },
@@ -43,6 +43,14 @@ pub struct Rm {
     pub command: Option<String>,
     #[clap(long, short = 'i', help = "Remove by ID", group = "like")]
     pub id: Option<uuid::Uuid>,
+    #[clap(
+        long,
+        short = 'a',
+        help = "Remove all commands",
+        default_value_t = false,
+        group = "like"
+    )]
+    pub all: bool,
 }
 impl Rm {
     pub fn to_identifier(&self) -> crate::Result<Identifier> {
@@ -60,9 +68,21 @@ impl Rm {
 
 #[derive(Debug, clap::Args)]
 pub struct Add {
-    #[clap(long, short, help = "Ignore existing commands with the same name", default_value_t = false, group = "add_mode")]
+    #[clap(
+        long,
+        short,
+        help = "Ignore existing commands with the same name",
+        default_value_t = false,
+        group = "add_mode"
+    )]
     pub ignore: bool,
-    #[clap(long, short, help = "Replace existing commands with the same name", default_value_t = false, group = "add_mode")]
+    #[clap(
+        long,
+        short,
+        help = "Replace existing commands with the same name",
+        default_value_t = false,
+        group = "add_mode"
+    )]
     pub replace: bool,
     pub name: String,
     pub command: String,

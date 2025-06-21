@@ -66,9 +66,13 @@ pub async fn main() -> Result<()> {
             let config = config::Config::try_new(&args)?;
             let database_path = dunce::simplified(&config.database);
             let database = database::connect(database_path.display().to_string()).await?;
-            let identifier = rm.to_identifier()?;
-            let command = command::Command::identifier(&database, identifier).await?;
-            command.delete(&database).await?;
+            if rm.all {
+                command::Command::delete_all(&database).await?;
+            } else {
+                let identifier = rm.to_identifier()?;
+                let command = command::Command::identifier(&database, identifier).await?;
+                command.delete(&database).await?;
+            }
         }
         cli::SubCommand::Completions { shell } => {
             cli::Cli::completions(shell);
