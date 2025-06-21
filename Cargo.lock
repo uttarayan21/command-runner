@@ -366,6 +366,7 @@ dependencies = [
  "error-stack",
  "http",
  "password-auth",
+ "regex",
  "serde",
  "serde_json",
  "serde_urlencoded",

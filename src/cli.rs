@@ -6,9 +6,19 @@ use crate::command::Identifier;
 pub struct Cli {
     #[clap(subcommand)]
     pub cmd: SubCommand,
-    #[clap(long, short, default_value = "/run/command-runner/database.sqlite")]
+    #[clap(
+        long,
+        short,
+        default_value = "/run/command-runner/database.sqlite",
+        global = true
+    )]
     pub database: Option<PathBuf>,
-    #[clap(long, short, default_value = "/etc/command-runner/config.toml")]
+    #[clap(
+        long,
+        short,
+        default_value = "/etc/command-runner/config.toml",
+        global = true
+    )]
     pub config: PathBuf,
 }
 
@@ -39,7 +49,7 @@ pub struct Run {
 pub struct Rm {
     #[clap(long, short = 'n', group = "like")]
     pub name: Option<String>,
-    #[clap(long, short = 'c', group = "like")]
+    #[clap(long, short = 'C', group = "like")]
     pub command: Option<String>,
     #[clap(long, short = 'i', help = "Remove by ID", group = "like")]
     pub id: Option<uuid::Uuid>,
@@ -93,7 +103,7 @@ pub struct Add {
 pub struct List {
     #[clap(long, short = 'n', group = "like")]
     pub name: Option<String>,
-    #[clap(long, short = 'c', group = "like")]
+    #[clap(long, short = 'C', group = "like")]
     pub command: Option<String>,
     #[clap(long, short = 'v', help = "Enable verbose output")]
     pub verbose: bool,
@@ -108,5 +118,23 @@ impl Cli {
             env!("CARGO_BIN_NAME"),
             &mut std::io::stdout(),
         );
+    }
+    pub fn command() -> clap::Command {
+        <Cli as clap::CommandFactory>::command()
+    }
+
+    #[cfg(debug_assertions)]
+    pub fn verify() {
+        Self::command().debug_assert()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cli() {
+        Cli::verify();
     }
 }

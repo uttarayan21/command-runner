@@ -1,4 +1,10 @@
 use crate::*;
+use regex::Regex;
+
+use std::{collections::BTreeMap, sync::LazyLock};
+static REPLACE_WITH: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\{.*\}").expect("Failed to compile regex"));
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
 pub struct Command {
     #[sqlx(try_from = "UuidWrapper")]
@@ -9,12 +15,48 @@ pub struct Command {
     pub args: Vec<String>,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-#[serde(tag = "type", content = "value")]
+#[derive(Debug, Clone)]
 pub enum Identifier {
     Id(uuid::Uuid),
     Name(String),
     Like(String),
+}
+
+#[derive(Debug, Clone)]
+pub struct IdentifierWrapper(Identifier);
+impl From<IdentifierWrapper> for Identifier {
+    fn from(wrapper: IdentifierWrapper) -> Self {
+        wrapper.0
+    }
+}
+impl From<Identifier> for IdentifierWrapper {
+    fn from(identifier: Identifier) -> Self {
+        IdentifierWrapper(identifier)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Identifier {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(serde::Deserialize)]
+        pub struct IdentifierStruct {
+            pub like: Option<String>,
+            pub id: Option<uuid::Uuid>,
+            pub name: Option<String>,
+        }
+        let identifier = IdentifierStruct::deserialize(deserializer)?;
+        if let Some(id) = identifier.id {
+            Ok(Identifier::Id(id))
+        } else if let Some(name) = identifier.name {
+            Ok(Identifier::Name(name))
+        } else if let Some(like) = identifier.like {
+            Ok(Identifier::Like(like))
+        } else {
+            Err(serde::de::Error::custom("No valid identifier provided"))
+        }
+    }
 }
 
 #[derive(Debug, sqlx::Type)]
@@ -96,6 +138,7 @@ impl Command {
             args,
         }
     }
+
     pub async fn run(&self) -> Result<Output> {
         use tokio::process::Command;
         Command::new(&self.command)
@@ -104,8 +147,57 @@ impl Command {
             .await
             .change_context(Error)
             .attach_printable(format!(
-                "Failed to run command: {} with args: {:?}",
-                self.command, self.args
+                "Failed to run command: {} with args: {}",
+                self.command,
+                self.args.join(" ")
+            ))
+            .map(From::from)
+    }
+
+    pub async fn run_with_placeholder(&self, args: BTreeMap<String, String>) -> Result<Output> {
+        if args.is_empty() {
+            return self.run().await;
+        }
+
+        let args = self
+            .args
+            .iter()
+            .map(|arg| {
+                if REPLACE_WITH.is_match(arg) {
+                    args.get(arg)
+                        .ok_or_else(|| {
+                            Error::new().attach_printable(format!(
+                                "Not enough arguments provided for command: {}",
+                                self.command
+                            ))
+                        })
+                        .and_then(|value| {
+                            let replaced_arg = REPLACE_WITH.replace_all(arg, value).to_string();
+                            if replaced_arg.is_empty() {
+                                Err(Error::new().attach_printable(format!(
+                                    "Replacement resulted in an empty argument for command: {}",
+                                    self.command
+                                )))
+                            } else {
+                                Ok(replaced_arg)
+                            }
+                        })
+                } else {
+                    Ok(arg.to_string())
+                }
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        use tokio::process::Command;
+        Command::new(&self.command)
+            .args(&args)
+            .output()
+            .await
+            .change_context(Error)
+            .attach_printable(format!(
+                "Failed to run command: {} with args: {}",
+                self.command,
+                args.join(" ")
             ))
             .map(From::from)
     }

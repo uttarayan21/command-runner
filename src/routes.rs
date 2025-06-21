@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use crate::{
     command::{Command, Output},
     *,
@@ -81,9 +83,10 @@ pub async fn run_identifier_command(
     axum::extract::Query(identifier): axum::extract::Query<command::Identifier>,
     axum::extract::Query(history): axum::extract::Query<History>,
     Extension(db): Extension<sqlx::SqlitePool>,
+    axum::extract::Json(args): axum::extract::Json<BTreeMap<String, String>>,
 ) -> Result<axum::Json<Output>> {
     let command = Command::identifier(&db, identifier).await?;
-    let output = command.run().await?;
+    let output = command.run_with_placeholder(args).await?;
     if history.history {
         output.save(&db, command.id).await?;
     }
