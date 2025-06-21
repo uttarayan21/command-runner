@@ -86,8 +86,9 @@ pub enum CommandAddMode {
 impl Output {
     pub async fn save(&self, database: &sqlx::SqlitePool, command_id: uuid::Uuid) -> Result<()> {
         sqlx::query(
-            "INSERT INTO history (command_id, stdout, stderr, success, exit_code) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO history (id, command_id, stdout, stderr, success, exit_code) VALUES (?, ?, ?, ?, ?, ?)",
         )
+        .bind(uuid::Uuid::new_v4().as_simple())
         .bind(command_id)
         .bind(&self.stdout)
         .bind(&self.stderr)
@@ -122,6 +123,7 @@ impl From<std::process::ExitStatus> for ExitStatus {
 impl From<std::process::Output> for Output {
     fn from(output: std::process::Output) -> Self {
         use ::tap::*;
+        dbg!(String::from_utf8(output.stdout.clone()));
         Output {
             stdout: String::from_utf8_lossy(&output.stdout)
                 .tap(|f| {
