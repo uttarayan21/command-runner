@@ -6,7 +6,7 @@ use crate::command::Identifier;
 pub struct Cli {
     #[clap(subcommand)]
     pub cmd: SubCommand,
-    #[clap(long, short, default_value = "/var/lib/command-runner/database.sqlite")]
+    #[clap(long, short, default_value = "/run/command-runner/database.sqlite")]
     pub database: Option<PathBuf>,
     #[clap(long, short, default_value = "/etc/command-runner/config.toml")]
     pub config: PathBuf,

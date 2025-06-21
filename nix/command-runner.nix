@@ -32,16 +32,17 @@ in {
       };
 
       commands = mkOption {
-        type = types.submodule;
+        type = lib.types.attrsOf (types.listOf types.str);
         default = {
-          "display_on" = ["hyprctl" "dispatch" "dpms" "on"];
-          "display_off" = ["hyprctl" "dispatch" "dpms"];
+          # "display_on" = ["hyprctl" "dispatch" "dpms" "on"];
+          # "display_off" = ["hyprctl" "dispatch" "dpms"];
         };
         description = ''
           List of commands to register with the command-runner server.
           Each command should be a string in the format "name:command".
           For example: {
-            "hello": "echo Hello, World!"
+              "display_on" = ["hyprctl" "dispatch" "dpms" "on"];
+              "display_off" = ["hyprctl" "dispatch" "dpms"];
           }
         '';
       };
@@ -74,7 +75,8 @@ in {
         ExecStart = "${lib.getExe cfg.package} run";
         RuntimeDirectory = "command-runner";
         RuntimeDirectoryMode = "0700";
-        DynamicUser = true;
+        User = "command-runner";
+        Group = "command-runner";
 
         # Hardening
         CapabilityBoundingSet = "";
@@ -116,13 +118,13 @@ in {
       environment =
         {
           CMD_RUNNER_HOST = cfg.host;
-          CMD-RUNNER_PORT = toString cfg.port;
+          CMD_RUNNER_PORT = toString cfg.port;
           # CMD-RUNNER_MAX_HISTORY_LENGTH = toString cfg.maxHistoryLength;
           # CMD-RUNNER_OPEN_REGISTRATION = lib.boolToString cfg.openRegistration;
           # CMD-RUNNER_PATH = cfg.path;
           # CMD-RUNNER_CONFIG_DIR = "/run/command-runner"; # required to start, but not used as configuration is via environment variables
         }
-        // lib.optionalAttrs (cfg.database.uri != null) {CMD_RUNNER_DATABASE = cfg.database.uri;};
+        // lib.optionalAttrs (cfg.database.path != null) {CMD_RUNNER_DATABASE = cfg.database.path;};
     };
     systemd.services.command-runner-commands = {
       description = "command-runner commands";
@@ -132,13 +134,18 @@ in {
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
-        DynamicUser = true;
+        User = "command-runner";
+        Group = "command-runner";
         RuntimeDirectory = "command-runner";
         RuntimeDirectoryMode = "0700";
       };
 
-      script = ''
-        ${lib.getExe cfg.package} add-commands
+      script = let
+        commands = lib.concatStringsSep "\n" (
+          lib.mapAttrsToList (name: value: "${lib.getExe cfg.package} add ${name} ${lib.concatStringsSep " " value}") cfg.commands
+        );
+      in ''
+        ${commands}
       '';
     };
 

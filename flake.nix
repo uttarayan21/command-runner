@@ -38,7 +38,7 @@
     crates-nix,
     ...
   }:
-    flake-utils.lib.eachDefaultSystem (
+    (flake-utils.lib.eachDefaultSystem (
       system: let
         pkgs = import nixpkgs {
           inherit system;
@@ -136,6 +136,10 @@
                   --fish <($out/bin/${name} completions fish) \
                   --zsh <($out/bin/${name} completions zsh)
               '';
+              meta = {
+                mainProgram = "${name}";
+                description = "A simple command runner written in Rust";
+              };
             });
         in {
           "${name}" = pkg;
@@ -161,13 +165,13 @@
             });
         };
       }
-    )
+    ))
     // {
       githubActions = nix-github-actions.lib.mkGithubMatrix {
         checks = nixpkgs.lib.getAttrs ["x86_64-linux"] self.checks;
       };
       nixosModules = {
-        command-runner = import ./nix/command-runner.nix self;
+        command-runner = ./nix/command-runner.nix;
       };
     };
 }
