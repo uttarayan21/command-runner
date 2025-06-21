@@ -25,6 +25,18 @@ in {
         description = "The port the command-runner server should listen on.";
       };
 
+      user = mkOption {
+        type = types.str;
+        default = "command-runner";
+        description = "User account under which command-runner runs.";
+      };
+
+      group = mkOption {
+        type = types.str;
+        default = "command-runner";
+        description = "Group under which command-runner runs.";
+      };
+
       openFirewall = mkOption {
         type = types.bool;
         default = false;
@@ -72,11 +84,11 @@ in {
       wantedBy = ["multi-user.target"];
 
       serviceConfig = {
+        Type = "simple";
+        User = cfg.user;
+        Group = cfg.group;
+        UMask = "0077";
         ExecStart = "${lib.getExe cfg.package} run";
-        RuntimeDirectory = "command-runner";
-        RuntimeDirectoryMode = "0700";
-        User = "command-runner";
-        Group = "command-runner";
 
         # Hardening
         CapabilityBoundingSet = "";
@@ -112,7 +124,6 @@ in {
           "@system-service"
           "~@privileged"
         ];
-        UMask = "0077";
       };
 
       environment =
@@ -134,8 +145,8 @@ in {
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
-        User = "command-runner";
-        Group = "command-runner";
+        User = cfg.user;
+        Group = cfg.group;
         RuntimeDirectory = "command-runner";
         RuntimeDirectoryMode = "0700";
       };
@@ -147,6 +158,18 @@ in {
       in ''
         ${commands}
       '';
+    };
+
+
+    users.users = mkIf (cfg.user == "command-runner") {
+      command-runner = {
+        inherit (cfg) group;
+        isSystemUser = true;
+      };
+    };
+
+    users.groups = mkIf (cfg.group == "command-runner") {
+      command-runner = { };
     };
 
     networking.firewall.allowedTCPPorts = mkIf cfg.openFirewall [cfg.port];
