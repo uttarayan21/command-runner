@@ -89,6 +89,8 @@ in {
         Group = cfg.group;
         UMask = "0077";
         ExecStart = "${lib.getExe cfg.package} run";
+        RuntimeDirectory = "command-runner";
+        RuntimeDirectoryMode = "0700";
 
         # Hardening
         CapabilityBoundingSet = "";
