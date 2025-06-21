@@ -16,6 +16,7 @@ pub async fn connect(database_url: impl AsRef<str>) -> Result<sqlx::SqlitePool> 
 
     let options = sqlx::sqlite::SqliteConnectOptions::default()
         .filename(path)
+        .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
         .create_if_missing(true);
     let database = sqlx::SqlitePool::connect_with(options)
         .await
