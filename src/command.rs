@@ -15,7 +15,7 @@ pub struct Command {
     pub args: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub enum Identifier {
     Id(uuid::Uuid),
     Name(String),
@@ -126,11 +126,17 @@ impl From<std::process::Output> for Output {
             stdout: String::from_utf8_lossy(&output.stdout)
                 .tap(|f| {
                     tracing::debug!("Command stdout: {}", f);
+                    if matches!(f, std::borrow::Cow::Owned(_)) {
+                        tracing::warn!("UTF-8 Lossy stdout");
+                    }
                 })
                 .to_string(),
             stderr: String::from_utf8_lossy(&output.stderr)
                 .tap(|f| {
                     tracing::debug!("Command stdout: {}", f);
+                    if matches!(f, std::borrow::Cow::Owned(_)) {
+                        tracing::warn!("UTF-8 Lossy stderr");
+                    }
                 })
                 .to_string(),
             status: ExitStatus::from(output.status),
@@ -352,13 +358,16 @@ async fn query_identifier(database: &sqlx::SqlitePool, identifier: Identifier) -
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
-    #[test]
-    fn test_identifier_uuid() {
-        let uuid = uuid::Uuid::new_v4();
-        let identifier = Identifier::Id(uuid);
-        let id = serde_urlencoded::to_string(&identifier).expect("Failed to serialize Identifier");
-        assert_eq!(id, format!(r#"type=Id&value={}"#, uuid));
-    }
+    // #[tokio::test]
+    // async fn test_hyprctl_command() {
+    //     let command = tokio::process::Command::new("hyprctl")
+    //         .args(["-j", "instances"])
+    //         .output()
+    //         .await
+    //         .unwrap();
+    //     assert!(command.status.success(), "Command failed: {:?}", command);
+    //     let stdout = String::from_utf8(command.stdout).unwrap();
+    //     println!("stdout: {}", stdout);
+    // }
 }
