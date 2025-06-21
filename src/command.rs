@@ -125,20 +125,20 @@ impl From<std::process::Output> for Output {
     fn from(output: std::process::Output) -> Self {
         Output {
             stdout: String::from_utf8_lossy(&output.stdout)
-                .tap(|f| {
-                    tracing::debug!("Command stdout: {}", f);
-                    if matches!(f, std::borrow::Cow::Owned(_)) {
-                        tracing::warn!("UTF-8 Lossy stdout");
-                    }
-                })
+                // .tap(|f| {
+                //     tracing::debug!("Command stdout: {}", f);
+                //     if matches!(f, std::borrow::Cow::Owned(_)) {
+                //         tracing::warn!("UTF-8 Lossy stdout");
+                //     }
+                // })
                 .to_string(),
             stderr: String::from_utf8_lossy(&output.stderr)
-                .tap(|f| {
-                    tracing::debug!("Command stdout: {}", f);
-                    if matches!(f, std::borrow::Cow::Owned(_)) {
-                        tracing::warn!("UTF-8 Lossy stderr");
-                    }
-                })
+                // .tap(|f| {
+                //     tracing::debug!("Command stdout: {}", f);
+                //     if matches!(f, std::borrow::Cow::Owned(_)) {
+                //         tracing::warn!("UTF-8 Lossy stderr");
+                //     }
+                // })
                 .to_string(),
             status: ExitStatus::from(output.status),
         }
@@ -159,14 +159,8 @@ impl Command {
         use tokio::process::Command;
         Command::new(&self.command)
             .args(&self.args)
-            .tap(|f| {
-                dbg!(f);
-            })
             .output()
             .await
-            .tap(|i| {
-                dbg!(i);
-            })
             .change_context(Error)
             .attach_printable(format!(
                 "Failed to run command: {} with args: {}",
@@ -365,14 +359,20 @@ async fn query_identifier(database: &sqlx::SqlitePool, identifier: Identifier) -
 
 #[cfg(test)]
 mod tests {
-
+    // use ::tap::*;
+    //
     // #[tokio::test]
     // async fn test_hyprctl_command() {
-    //     let command = tokio::process::Command::new("hyprctl")
-    //         .args(["-j", "instances"])
-    //         .output()
-    //         .await
-    //         .unwrap();
+    //     let command = tokio::process::Command::new(
+    //         "/nix/store/0wp5x6vhk0ppyxmnhb6cc8c2nw0287bn-hyprland-0.49.0/bin/hyprctl",
+    //     )
+    //     .args(["-j", "instances"])
+    //     .tap(|c| {
+    //         dbg!(c);
+    //     })
+    //     .output()
+    //     .await
+    //     .unwrap();
     //     assert!(command.status.success(), "Command failed: {:?}", command);
     //     let stdout = String::from_utf8(command.stdout).unwrap();
     //     println!("stdout: {}", stdout);
