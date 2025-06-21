@@ -1,9 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{
-    command::{Command, Output},
-    *,
-};
+use crate::{command::Command, *};
 use axum::Extension;
 
 pub fn routes() -> axum::Router {
@@ -62,14 +59,22 @@ pub async fn list_commands(
 }
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-pub struct History {
+pub struct RunArgs {
     #[serde(default)]
     history: bool,
+    #[serde(default)]
+    full: bool,
+    #[serde(default)]
+    json: bool,
 }
 
-impl Default for History {
+impl Default for RunArgs {
     fn default() -> Self {
-        History { history: true }
+        RunArgs {
+            history: true,
+            full: false,
+            json: false,
+        }
     }
 }
 
@@ -81,16 +86,28 @@ pub async fn identifier_command(
 }
 pub async fn run_identifier_command(
     axum::extract::Query(identifier): axum::extract::Query<command::Identifier>,
-    axum::extract::Query(history): axum::extract::Query<History>,
+    axum::extract::Query(run_args): axum::extract::Query<RunArgs>,
     Extension(db): Extension<sqlx::SqlitePool>,
     axum::extract::Json(args): axum::extract::Json<BTreeMap<String, String>>,
-) -> Result<axum::Json<Output>> {
+) -> Result<axum::response::Response> {
+    use axum::response::IntoResponse;
     let command = Command::identifier(&db, identifier).await?;
     let output = command.run_with_placeholder(args).await?;
-    if history.history {
+    if run_args.history {
         output.save(&db, command.id).await?;
     }
-    Ok(axum::Json(output))
+    if run_args.full {
+        Ok(axum::Json(output).into_response())
+    } else if run_args.json {
+        Ok(axum::Json(
+            serde_json::value::RawValue::from_string(output.stdout)
+                .change_context(Error)
+                .attach_printable("Failed to parse output.stdout as json"),
+        )
+        .into_response())
+    } else {
+        Ok(axum::Json(output.stdout).into_response())
+    }
 }
 
 pub async fn delete_identifier_command(

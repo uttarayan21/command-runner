@@ -111,7 +111,7 @@ pub struct List {
 
 impl Cli {
     pub fn completions(shell: clap_complete::Shell) {
-        let mut command = <Cli as clap::CommandFactory>::command();
+        let mut command = Self::command();
         clap_complete::generate(
             shell,
             &mut command,
@@ -119,11 +119,12 @@ impl Cli {
             &mut std::io::stdout(),
         );
     }
+
     pub fn command() -> clap::Command {
         <Cli as clap::CommandFactory>::command()
     }
 
-    #[cfg(debug_assertions)]
+    #[cfg(test)]
     pub fn verify() {
         Self::command().debug_assert()
     }
