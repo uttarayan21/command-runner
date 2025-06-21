@@ -106,7 +106,7 @@ pub async fn run_identifier_command(
         )
         .into_response())
     } else {
-        Ok(axum::Json(output.stdout).into_response())
+        Ok(output.stdout.into_response())
     }
 }
 

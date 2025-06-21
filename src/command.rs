@@ -121,9 +121,18 @@ impl From<std::process::ExitStatus> for ExitStatus {
 
 impl From<std::process::Output> for Output {
     fn from(output: std::process::Output) -> Self {
+        use ::tap::*;
         Output {
-            stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-            stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+            stdout: String::from_utf8_lossy(&output.stdout)
+                .tap(|f| {
+                    tracing::debug!("Command stdout: {}", f);
+                })
+                .to_string(),
+            stderr: String::from_utf8_lossy(&output.stderr)
+                .tap(|f| {
+                    tracing::debug!("Command stdout: {}", f);
+                })
+                .to_string(),
             status: ExitStatus::from(output.status),
         }
     }
