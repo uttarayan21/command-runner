@@ -170,8 +170,13 @@
       githubActions = nix-github-actions.lib.mkGithubMatrix {
         checks = nixpkgs.lib.getAttrs ["x86_64-linux"] self.checks;
       };
-      nixosModules = {
-        command-runner = ./nix/command-runner.nix;
+      nixosModules = rec {
+        command-runner = ./nix/nixosModules/command-runner.nix;
+        default = command-runner;
+      };
+      homeManagerModules = rec {
+        command-runner = ./nix/homeManagerModules/command-runner.nix;
+        default = command-runner;
       };
     };
 }
