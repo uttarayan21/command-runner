@@ -156,7 +156,5 @@ in {
         }
         // lib.optionalAttrs (cfg.database.path != null) {CMD_RUNNER_DATABASE = cfg.database.path;};
     };
-
-    networking.firewall.allowedTCPPorts = mkIf cfg.openFirewall [cfg.port];
   };
 }
